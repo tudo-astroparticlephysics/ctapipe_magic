@@ -7,16 +7,17 @@ from setuptools import setup, find_packages, Extension
 
 # Get some values from the setup.cfg
 from configparser import RawConfigParser
-conf = RawConfigParser()
-conf.read(['setup.cfg'])
-metadata = dict(conf.items('metadata'))
 
-PACKAGENAME = metadata.get('package_name', 'packagename')
-DESCRIPTION = metadata.get('description', 'Astropy affiliated package')
-AUTHOR = metadata.get('author', '')
-AUTHOR_EMAIL = metadata.get('author_email', '')
-LICENSE = metadata.get('license', 'unknown')
-URL = metadata.get('url', 'http://astropy.org')
+conf = RawConfigParser()
+conf.read(["setup.cfg"])
+metadata = dict(conf.items("metadata"))
+
+PACKAGENAME = metadata.get("package_name", "packagename")
+DESCRIPTION = metadata.get("description", "Astropy affiliated package")
+AUTHOR = metadata.get("author", "")
+AUTHOR_EMAIL = metadata.get("author_email", "")
+LICENSE = metadata.get("license", "unknown")
+URL = metadata.get("url", "http://astropy.org")
 
 # Get the long description from the package's docstring
 __import__(PACKAGENAME)
@@ -27,63 +28,66 @@ LONG_DESCRIPTION = package.__doc__
 # TODO: this shuold be automated (e.g. look for main functions and
 # rename _ to -, and prepend 'ctapipe'
 entry_points = {}
-entry_points['console_scripts'] = [
-    'ctapipe-info = ctapipe.tools.info:main',
-    'ctapipe-camdemo = ctapipe.tools.camdemo:main',
-    'ctapipe-dump-triggers = ctapipe.tools.dump_triggers:main',
-    'ctapipe-flow = ctapipe.flow.flow:main',
-    'ctapipe-chargeres-extract = ctapipe.tools.extract_charge_resolution:main',
-    'ctapipe-chargeres-plot = ctapipe.tools.plot_charge_resolution:main',
-    'ctapipe-chargeres-hist = '
-    'ctapipe.tools.plot_charge_resolution_variation_hist:main',
-    'ctapipe-dump-instrument=ctapipe.tools.dump_instrument:main'
+entry_points["console_scripts"] = [
+    "ctapipe-info = ctapipe.tools.info:main",
+    "ctapipe-camdemo = ctapipe.tools.camdemo:main",
+    "ctapipe-dump-triggers = ctapipe.tools.dump_triggers:main",
+    "ctapipe-flow = ctapipe.flow.flow:main",
+    "ctapipe-chargeres-extract = ctapipe.tools.extract_charge_resolution:main",
+    "ctapipe-chargeres-plot = ctapipe.tools.plot_charge_resolution:main",
+    "ctapipe-chargeres-hist = "
+    "ctapipe.tools.plot_charge_resolution_variation_hist:main",
+    "ctapipe-dump-instrument=ctapipe.tools.dump_instrument:main",
 ]
 
 
 # C Extensions
-neighboursum_module = Extension('ctapipe.utils.neighbour_sum_c',
-                                sources=['ctapipe/utils/neighbour_sum_c.cc'])
+neighboursum_module = Extension(
+    "ctapipe.utils.neighbour_sum_c", sources=["ctapipe/utils/neighbour_sum_c.cc"]
+)
 
-setup(name=PACKAGENAME,
-      packages=find_packages(),
-      version='0.0.1',
-      description=DESCRIPTION,
-      # these should be minimum list of what is needed to run (note
-      # don't need to list the sub-dependencies like numpy, since
-      # astropy already depends on it)
-      install_requires=[
-          'astropy>=1.3',
-          'iminuit',
-          'numpy',
-          'pytest_runner',
-          'scipy>=0.19',
-          'tables',
-          'tqdm',
-          'traitlets',
-          'psutil',
-          'pyhessio>=2.1',
-          'matplotlib>=2.0',
-          # 'numba',
-          'pandas',
-      ],
-      tests_require=['pytest', 'ctapipe-extra>=0.2.11'],
-      author=AUTHOR,
-      author_email=AUTHOR_EMAIL,
-      license=LICENSE,
-      url=URL,
-      long_description=LONG_DESCRIPTION,
-      classifiers=[
-          'Intended Audience :: Science/Research',
-          'License :: OSI Approved :: BSD License',
-          'Programming Language :: C',
-          'Programming Language :: Cython',
-          'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: Implementation :: CPython',
-          'Topic :: Scientific/Engineering :: Astronomy',
-          'Development Status :: 3 - Alpha',
-      ],
-      zip_safe=False,
-      use_2to3=False,
-      entry_points=entry_points,
-      # ext_modules=[neighboursum_module]
-      )
+setup(
+    name=PACKAGENAME,
+    packages=find_packages(),
+    version="0.0.1",
+    description=DESCRIPTION,
+    # these should be minimum list of what is needed to run (note
+    # don't need to list the sub-dependencies like numpy, since
+    # astropy already depends on it)
+    install_requires=[
+        "astropy>=1.3",
+        "iminuit",
+        "numpy",
+        "pytest_runner",
+        "scipy>=0.19",
+        "tables",
+        "tqdm",
+        "traitlets",
+        "psutil",
+        "pyhessio>=2.1",
+        "matplotlib>=2.0",
+        # 'numba',
+        "pandas",
+        "ctapipe-extra",
+    ],
+    tests_require=["pytest", "ctapipe-extra>=0.2.11"],
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    license=LICENSE,
+    url=URL,
+    long_description=LONG_DESCRIPTION,
+    classifiers=[
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: C",
+        "Programming Language :: Cython",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Topic :: Scientific/Engineering :: Astronomy",
+        "Development Status :: 3 - Alpha",
+    ],
+    zip_safe=False,
+    use_2to3=False,
+    entry_points=entry_points,
+    # ext_modules=[neighboursum_module]
+)

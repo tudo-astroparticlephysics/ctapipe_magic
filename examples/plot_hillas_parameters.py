@@ -10,7 +10,7 @@ from ctapipe_magic.magicioeventsource import MAGICIOEventSource
 if __name__ == "__main__":
 
     # Load the camera
-    geom = CameraGeometry.from_table("/data/MAGICII.camgeom.fits.gz")
+    geom = CameraGeometry.from_name(camera_id="MAGICCam")
 
     fig, ax = plt.subplots()
 

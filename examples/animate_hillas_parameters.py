@@ -9,7 +9,7 @@ from ctapipe_magic.magicioeventsource import MAGICIOEventSource
 from matplotlib.animation import FuncAnimation
 
 # Load the camera
-geom = CameraGeometry.from_table("/data/MAGICII.camgeom.fits.gz")
+geom = CameraGeometry.from_name(camera_id="MAGICCam")
 
 fig, ax = plt.subplots()
 
