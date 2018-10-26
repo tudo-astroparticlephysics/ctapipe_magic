@@ -28,34 +28,24 @@ class MAGICIOEventSource(EventSource):
         return file_path[-4:] == "root"
 
     def _generator(self):
-        data = DL1Container()
-        data_camera = DL1CameraContainer()
+        data = DataContainer()
         data.meta["origin"] = "magicio"
 
         # open data with uproot
-        opened = self.uproot.open(self.input_url)
+        magic_I = uproot.open(self.input_url)
+        magic_II = uproot.open(self.input_url)
 
-        # # Maybe we don't need this, in one single file I tested there were
-        # # two Events branches, with one longer than the other and
-        # # containing everything the shorter one contained
-        # # Sometimes there are more than 1 event branches in the root files
-        # event_keys = []
-        # for key in opened.keys():
-        #     if b"Events" in key:
-        #         event_keys.append(key)
+        events = magic_I[b"Events"]
+        fPhot_I = events[b"MCerPhotEvt.fPixels.fPhot"].array()
 
-        # --- Implement Logic here ---
-        # todo:
-        # - extract metadata from files
-        # - get two files for two magic telescopes
-        # - input every event from file into correspondig container
+        events = magic_II[b"Events"]
+        fPhot_II = events[b"MCerPhotEvt.fPixels.fPhot"].array()
 
-        events = opened[b"Events"]
-        fPhot_arr = events[b"MCerPhotEvt.fPixels.fPhot"].array()
+        for evt_I, evt_II in zip(fPhot_I, fPhot_II):
+            data.dl1.tel[0].image = evt_I[:1039]
+            data.dl1.tel[0].peakpos = None
 
-        for evt in fPhot_arr:
-            data_camera.image = evt[:1039]
-            data_camera.peakpos = None
-            data.tel = data_camera
+            data.dl1.tel[1].image = evt_II[:1039]
+            data.dl1.tel[1].peakpos = None
             yield data
         return
