@@ -1,8 +1,6 @@
-from astropy import units as u
-from astropy.coordinates import Angle
-from astropy.time import Time
+import uproot
 from ctapipe.io.eventsource import EventSource
-from ctapipe.io.containers import DL1Container, DL1CameraContainer
+from ctapipe.io.containers import DataContainer
 
 
 __all__ = ["MAGICIOEventSource"]
@@ -23,15 +21,6 @@ class MAGICIOEventSource(EventSource):
 
     def __init__(self, config=None, tool=None, **kwargs):
         super().__init__(config=config, tool=tool, **kwargs)
-
-        try:
-            import uproot
-        except ImportError:
-            msg = "The `uproot` python module is required to access root files. Install with `pip install uproot`."
-            self.log.error(msg)
-            raise
-
-        self.uproot = uproot
 
     @staticmethod
     def is_compatible(file_path):
