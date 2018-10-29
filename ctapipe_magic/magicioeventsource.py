@@ -31,9 +31,18 @@ class MAGICIOEventSource(EventSource):
         data = DataContainer()
         data.meta["origin"] = "magicio"
 
+        # Get both data paths from single input_url
+        # It is assumed, that both files are in the same location
+        if "_M1_" in self.input_url:
+            path_I = self.input_url
+            path_II = self.input_url.replace("_M1_", "_M2_")
+        elif "_M2_" in self.input_url:
+            path_II = self.input_url
+            path_I = self.input_url.replace("_M2_", "_M1_")
+
         # open data with uproot
-        magic_I = uproot.open(self.input_url)
-        magic_II = uproot.open(self.input_url)
+        magic_I = uproot.open(path_I)
+        magic_II = uproot.open(path_II)
 
         events = magic_I[b"Events"]
         fPhot_I = events[b"MCerPhotEvt.fPixels.fPhot"].array()
