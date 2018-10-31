@@ -69,28 +69,29 @@ class MAGICIOEventSource(EventSource):
             is_mc = True
 
         # Event data same in both files (mc / data)
-        events = magic_I[b"Events"]
-        fPhot_I = events[b"MCerPhotEvt.fPixels.fPhot"].array()
+        events_I = magic_I[b"Events"]
+        fPhot_I = events_I[b"MCerPhotEvt.fPixels.fPhot"].array()
         # TODO: Get Pointing Positions for both telescopes
-        Zd_I = events[b"MPointingPos.fDevZd"].array()
-        Az_I = events[b"MPointingPos.fDevAz"].array()
+        Zd_I = events_I[b"MPointingPos.fDevZd"].array()
+        Az_I = events_I[b"MPointingPos.fDevAz"].array()
 
-        events = magic_II[b"Events"]
-        fPhot_II = events[b"MCerPhotEvt.fPixels.fPhot"].array()
+        events_II = magic_II[b"Events"]
+        fPhot_II = events_II[b"MCerPhotEvt.fPixels.fPhot"].array()
         # TODO: Get Pointing Positions for both telescopes
-        Zd_II = events[b"MPointingPos.fDevZd"].array()
-        Az_II = events[b"MPointingPos.fDevAz"].array()
+        Zd_II = events_II[b"MPointingPos.fDevZd"].array()
+        Az_II = events_II[b"MPointingPos.fDevAz"].array()
 
         if is_mc:  # Monte Carlo
-            # TODO: Fill MCEventContainer
-            data.mc.energy = 0.0 * u.TeV
-            data.mc.alt = 0.0 * u.deg
-            data.mc.az = 0.0 * u.deg
-            data.mc.core_x = 0.0 * u.m
-            data.mc.core_y = 0.0 * u.m
-            data.mc.h_first_int = 0.0
-            data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
-            data.mc.shower_primary_id = 0
+
+            # # TODO: Fill MCEventContainer
+            # data.mc.energy = 0.0 * u.TeV
+            # data.mc.alt = 0.0 * u.deg
+            # data.mc.az = 0.0 * u.deg
+            # data.mc.core_x = 0.0 * u.m
+            # data.mc.core_y = 0.0 * u.m
+            # data.mc.h_first_int = 0.0
+            # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
+            # data.mc.shower_primary_id = 0
 
             # TODO: Fill InstrumentContainer (deprecated)
             data.inst.subarray = SubarrayDescription("MonteCarloArray")
@@ -98,10 +99,19 @@ class MAGICIOEventSource(EventSource):
                 0: TelescopeDescription(optics=self.optics, camera=self.camgeom),
                 1: TelescopeDescription(optics=self.optics, camera=self.camgeom),
             }
-            data.inst.subarray.tels[0].optics.equivalent_focal_length = 1 * u.km
-            data.inst.subarray.tels[1].optics.equivalent_focal_length = 1 * u.km
+            data.inst.subarray.tels[0].optics.equivalent_focal_length = (
+                magic_I[b"RunHeaders"][b"MMcConfigRunHeader.fFocalDist"].array()[0]
+                * u.m
+            )
+            data.inst.subarray.tels[1].optics.equivalent_focal_length = (
+                magic_II[b"RunHeaders"][b"MMcConfigRunHeader.fFocalDist"].array()[0]
+                * u.m
+            )
             # TODO: Find out positions of telescopes
-            data.inst.subarray.positions = {0: [0, 0, 0], 1: [10, 10, 0]}
+            data.inst.subarray.positions = {
+                0: [31.80, -28.10, 0],  #  3180, -2810 cm
+                1: [-31.80, 28.10, 0],  # -3180,  2810 cm
+            }
 
             for i, (evt_I, evt_II) in enumerate(zip(fPhot_I, fPhot_II)):
                 # Fill MCCameraEventContainer
