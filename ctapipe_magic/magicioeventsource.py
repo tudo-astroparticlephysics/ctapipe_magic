@@ -1,6 +1,5 @@
 import uproot
-
-# import numpy as np
+import numpy as np
 from ctapipe.io.eventsource import EventSource
 from ctapipe.io.containers import DataContainer
 from astropy import units as u
@@ -110,8 +109,19 @@ class MAGICIOEventSource(EventSource):
             core_y = events[0][b"MMcEvt.fCoreY"].array()
             zFirstInt = events[0][b"MMcEvt.fZFirstInteraction"].array()
 
+            triggered_events = {
+                0: events[0][b"MMcEvt.fEvtNumber"].array(),
+                1: events[1][b"MMcEvt.fEvtNumber"].array(),
+            }
+
             # Fill container per event
-            for i in range(data.meta["n_events"]):
+            for i, index in enumerate(triggered_events[0]):
+                # The mask is neccessary that the triggered events are the same
+                mask = index == triggered_events[1]
+                if np.sum(mask) == 0:
+                    # telescope 0 triggered an event which was not triggered by telescope 1
+                    continue
+
                 data.mc.shower_primary_id = particle_id_mapping[primary_id[i]]
 
                 # # TODO: Fill MCEventContainer
@@ -121,7 +131,7 @@ class MAGICIOEventSource(EventSource):
                 data.mc.h_first_int = (zFirstInt[i] * u.cm,)
                 # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
                 # IMPORTANT TODO: mc.alt mc.az
-                data.mc.az = (Az[0][i] - 0.4) * u.deg
+                data.mc.az = (Az[0][i] - 0.0) * u.deg
                 data.mc.alt = (90.0 - Zd[0][i]) * u.deg
                 # Fill MCCameraEventContainer
                 data.mc.tel[0].photo_electron_image = i
@@ -130,14 +140,14 @@ class MAGICIOEventSource(EventSource):
                 # Fill DL1Container (calibrated image)
                 data.dl1.tel[0].image = fPhots[0][i][:1039]
                 data.dl1.tel[0].peakpos = None
-                data.dl1.tel[1].image = fPhots[1][i][:1039]
+                data.dl1.tel[1].image = fPhots[1][mask][0][:1039]
                 data.dl1.tel[1].peakpos = None
 
                 # TODO: Fill TelescopePointingContainer
                 data.pointing[0].azimuth = Az[0][i] * u.deg
                 data.pointing[0].altitude = (90.0 - Zd[0][i]) * u.deg
-                data.pointing[1].azimuth = Az[1][i] * u.deg
-                data.pointing[1].altitude = (90.0 - Zd[1][i]) * u.deg
+                data.pointing[1].azimuth = Az[1][mask][0] * u.deg
+                data.pointing[1].altitude = (90.0 - Zd[1][mask][0]) * u.deg
 
                 yield data
 
