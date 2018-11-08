@@ -128,7 +128,7 @@ class MAGICIOEventSource(EventSource):
                 data.mc.energy = energy[i] * u.MeV
                 data.mc.core_x = core_x[i] * u.cm
                 data.mc.core_y = core_y[i] * u.cm
-                data.mc.h_first_int = (zFirstInt[i] * u.cm,)
+                data.mc.h_first_int = zFirstInt[i] * u.cm
                 # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
                 # IMPORTANT TODO: mc.alt mc.az
                 data.mc.az = (Az[0][i] - 0.0) * u.deg
