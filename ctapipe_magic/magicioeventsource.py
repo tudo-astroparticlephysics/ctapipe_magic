@@ -1,4 +1,6 @@
 import uproot
+
+# import numpy as np
 from ctapipe.io.eventsource import EventSource
 from ctapipe.io.containers import DataContainer
 from astropy import units as u
@@ -27,15 +29,15 @@ class MAGICIOEventSource(EventSource):
     def __init__(self, config=None, tool=None, **kwargs):
         super().__init__(config=config, tool=tool, **kwargs)
 
-        # TODO: Initialize CameraGeamoetry and OpticsDescription
+        # TODO: Initialize CameraGeometry and OpticsDescription
         # needed for subarray information in
-        # data.inst.subarray (but is deprecated?)
+        # data.inst.subarray (but is deprecated ??)
         self.camgeom = CameraGeometry.from_name(camera_id="MAGICCam")
         self.optics = OpticsDescription(
             mirror_type="SC",
             tel_type="MST",
             tel_subtype="1M",
-            equivalent_focal_length=1 * u.m,
+            equivalent_focal_length=1700 * u.cm,
             mirror_area=None,
             num_mirror_tiles=None,
         )
@@ -52,92 +54,96 @@ class MAGICIOEventSource(EventSource):
         # Get both data paths from single input_url
         # It is assumed that both files are in the same location
         # TODO: Get second input_url?
-        # TODO: (Rewrite EventSource.__init__ to correctly use core.Provenance)
+        #   (Rewrite EventSource.__init__ to correctly use core.Provenance)
+        paths = {}
         if "_M1_" in self.input_url:
-            path_I = self.input_url
-            path_II = self.input_url.replace("_M1_", "_M2_")
+            paths[0] = self.input_url
+            paths[1] = self.input_url.replace("_M1_", "_M2_")
         elif "_M2_" in self.input_url:
-            path_II = self.input_url
-            path_I = self.input_url.replace("_M2_", "_M1_")
+            paths[1] = self.input_url
+            paths[0] = self.input_url.replace("_M1_", "_M2_")
 
         # open data with uproot
-        magic_I = uproot.open(path_I)
-        magic_II = uproot.open(path_II)
+        magic_data = {0: uproot.open(paths[0]), 1: uproot.open(paths[1])}
 
         # check if data file is monte carlo or data by checking keys
-        if b"OriginalMC;1" in magic_I.keys():
-            is_mc = True
+        is_mc = b"OriginalMC;1" in magic_data[0].keys()
 
         # Event data same in both files (mc / data)
-        events_I = magic_I[b"Events"]
-        fPhot_I = events_I[b"MCerPhotEvt.fPixels.fPhot"].array()
-        # TODO: Get Pointing Positions for both telescopes
-        Zd_I = events_I[b"MPointingPos.fDevZd"].array()
-        Az_I = events_I[b"MPointingPos.fDevAz"].array()
+        events = {0: magic_data[0][b"Events"], 1: magic_data[1][b"Events"]}
 
-        events_II = magic_II[b"Events"]
-        fPhot_II = events_II[b"MCerPhotEvt.fPixels.fPhot"].array()
-        # TODO: Get Pointing Positions for both telescopes
-        Zd_II = events_II[b"MPointingPos.fDevZd"].array()
-        Az_II = events_II[b"MPointingPos.fDevAz"].array()
+        data.meta["n_events"] = min(len(events[0]), len(events[1]))
+
+        fPhots = {
+            0: events[0][b"MCerPhotEvt.fPixels.fPhot"].array(),
+            1: events[1][b"MCerPhotEvt.fPixels.fPhot"].array(),
+        }
+
+        Az = {
+            0: events[0][b"MPointingPos.fAz"].array(),
+            1: events[1][b"MPointingPos.fAz"].array(),
+        }
+
+        Zd = {
+            0: events[0][b"MPointingPos.fZd"].array(),
+            1: events[1][b"MPointingPos.fZd"].array(),
+        }
 
         if is_mc:  # Monte Carlo
-
-            # # TODO: Fill MCEventContainer
-            # data.mc.energy = 0.0 * u.TeV
-            # data.mc.alt = 0.0 * u.deg
-            # data.mc.az = 0.0 * u.deg
-            # data.mc.core_x = 0.0 * u.m
-            # data.mc.core_y = 0.0 * u.m
-            # data.mc.h_first_int = 0.0
-            # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
-            # data.mc.shower_primary_id = 0
-
+            # Particle ID, mapping = {magic: ctapipe}
+            particle_id_mapping = {1: 0}  # gamma
             # TODO: Fill InstrumentContainer (deprecated)
             data.inst.subarray = SubarrayDescription("MonteCarloArray")
             data.inst.subarray.tels = {
                 0: TelescopeDescription(optics=self.optics, camera=self.camgeom),
                 1: TelescopeDescription(optics=self.optics, camera=self.camgeom),
             }
-            data.inst.subarray.tels[0].optics.equivalent_focal_length = (
-                magic_I[b"RunHeaders"][b"MMcConfigRunHeader.fFocalDist"].array()[0]
-                * u.m
-            )
-            data.inst.subarray.tels[1].optics.equivalent_focal_length = (
-                magic_II[b"RunHeaders"][b"MMcConfigRunHeader.fFocalDist"].array()[0]
-                * u.m
-            )
             # TODO: Find out positions of telescopes
-            data.inst.subarray.positions = {
+            data.inst.subarray.positions = {  # has to be in meters
                 0: [31.80, -28.10, 0],  #  3180, -2810 cm
                 1: [-31.80, 28.10, 0],  # -3180,  2810 cm
             }
 
-            for i, (evt_I, evt_II) in enumerate(zip(fPhot_I, fPhot_II)):
+            primary_id = events[0][b"MMcEvt.fPartId"].array()
+            energy = events[0][b"MMcEvt.fEnergy"].array()
+            core_x = events[0][b"MMcEvt.fCoreX"].array()
+            core_y = events[0][b"MMcEvt.fCoreY"].array()
+            zFirstInt = events[0][b"MMcEvt.fZFirstInteraction"].array()
+
+            # Fill container per event
+            for i in range(data.meta["n_events"]):
+                data.mc.shower_primary_id = particle_id_mapping[primary_id[i]]
+
+                # # TODO: Fill MCEventContainer
+                data.mc.energy = energy[i] * u.MeV
+                data.mc.core_x = core_x[i] * u.cm
+                data.mc.core_y = core_y[i] * u.cm
+                data.mc.h_first_int = (zFirstInt[i] * u.cm,)
+                # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
+                # IMPORTANT TODO: mc.alt mc.az
+                data.mc.az = (Az[0][i] - 0.4) * u.deg
+                data.mc.alt = (90.0 - Zd[0][i]) * u.deg
                 # Fill MCCameraEventContainer
                 data.mc.tel[0].photo_electron_image = i
                 data.mc.tel[1].photo_electron_image = i
-                data.mc.tel[0].azimuth_raw = 0.0
-                data.mc.tel[0].altitude_raw = 0.0
-                data.mc.tel[1].azimuth_raw = 0.0
-                data.mc.tel[1].altitude_raw = 0.0
 
                 # Fill DL1Container (calibrated image)
-                data.dl1.tel[0].image = evt_I[:1039]
+                data.dl1.tel[0].image = fPhots[0][i][:1039]
                 data.dl1.tel[0].peakpos = None
-                data.dl1.tel[1].image = evt_II[:1039]
+                data.dl1.tel[1].image = fPhots[1][i][:1039]
                 data.dl1.tel[1].peakpos = None
 
                 # TODO: Fill TelescopePointingContainer
-                data.pointing[0].azimuth = Zd_I[i]
-                data.pointing[0].altitude = Az_I[i]
-                data.pointing[1].azimuth = Zd_II[i]
-                data.pointing[1].altitude = Az_II[i]
+                data.pointing[0].azimuth = Az[0][i] * u.deg
+                data.pointing[0].altitude = (90.0 - Zd[0][i]) * u.deg
+                data.pointing[1].azimuth = Az[1][i] * u.deg
+                data.pointing[1].altitude = (90.0 - Zd[1][i]) * u.deg
 
                 yield data
 
+        # TODO: REAL DATA
         else:  # Measurement, Real Data
-            for evt_I, evt_II in zip(fPhot_I, fPhot_II):
+            for evt_I, evt_II in zip(fPhots[0], fPhots[1]):
                 # Fill DL1Container (calibrated image)
                 data.dl1.tel[0].image = evt_I[:1039]
                 data.dl1.tel[0].peakpos = None
@@ -145,10 +151,11 @@ class MAGICIOEventSource(EventSource):
                 data.dl1.tel[1].peakpos = None
 
                 # TODO Fill TelescopePointingContainer
-                data.pointing[0].azimuth = 0 * u.rad
-                data.pointing[0].altitude = 0 * u.rad
-                data.pointing[1].azimuth = 0 * u.rad
-                data.pointing[1].altitude = 0 * u.rad
+                data.pointing[0].azimuth = Az[0][i] * u.deg
+                data.pointing[0].altitude = (90 - Zd[0][i]) * u.deg
+                data.pointing[1].azimuth = Az[1][i] * u.deg
+                data.pointing[1].altitude = (90 - Zd[1][i]) * u.deg
+
                 yield data
 
         return
