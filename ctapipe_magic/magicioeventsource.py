@@ -88,6 +88,16 @@ class MAGICIOEventSource(EventSource):
             1: events[1][b"MPointingPos.fZd"].array(),
         }
 
+        Source_Phi = {
+            0: events[0][b"MMcEvt.fPhi"].array(),
+            1: events[1][b"MMcEvt.fPhi"].array(),
+        }
+
+        Source_Theta = {
+            0: events[0][b"MMcEvt.fTheta"].array(),
+            1: events[1][b"MMcEvt.fTheta"].array(),
+        }
+
         if is_mc:  # Monte Carlo
             # Particle ID, mapping = {magic: ctapipe}
             particle_id_mapping = {1: 0}  # gamma
@@ -131,8 +141,10 @@ class MAGICIOEventSource(EventSource):
                 data.mc.h_first_int = zFirstInt[i] * u.cm
                 # data.mc.x_max = 0.0 * u.g / (u.cm ** 2)
                 # IMPORTANT TODO: mc.alt mc.az
-                data.mc.az = (Az[0][i] - 0.0) * u.deg
+                data.mc.az = (Az[0][i] - 0.4) * u.deg
                 data.mc.alt = (90.0 - Zd[0][i]) * u.deg
+                # data.mc.alt = Source_Theta[0][i] * u.rad
+                # data.mc.az = (Source_Phi[0][i]) * u.rad
                 # Fill MCCameraEventContainer
                 data.mc.tel[0].photo_electron_image = i
                 data.mc.tel[1].photo_electron_image = i
